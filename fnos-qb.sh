@@ -39,10 +39,12 @@ if ! command -v go &> /dev/null; then
     fi
 fi
 
-# 修改 go.mod 文件中的 Go 版本
-if grep -q 'go 1.22.0' go.mod; then
-    sed -i 's/go 1.22.0/go 1.19/g' go.mod
-    echo "Modified go.mod to use Go 1.19"
+# 移除 go.mod 文件中的 Go 版本声明
+if grep -q '^go ' go.mod; then
+    sed -i '/^go /d' go.mod
+    echo "Removed go version declaration from go.mod"
+else
+    echo "No go version declaration found in go.mod"
 fi
 
 # 设置环境变量
