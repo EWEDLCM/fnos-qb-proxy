@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# 删除已存在的目录和文件
+if [ -d "fnos-qb-proxy" ]; then
+    echo "Deleting existing directory 'fnos-qb-proxy'..."
+    rm -rf fnos-qb-proxy
+fi
+
 # 提示用户输入端口号
 read -p "Please enter the port number: " PORT
 
@@ -31,6 +37,12 @@ if ! command -v go &> /dev/null; then
         echo "Unsupported operating system: $OSTYPE"
         exit 1
     fi
+fi
+
+# 修改 go.mod 文件中的 Go 版本
+if grep -q 'go 1.22.0' go.mod; then
+    sed -i 's/go 1.22.0/go 1.19/g' go.mod
+    echo "Modified go.mod to use Go 1.19"
 fi
 
 # 设置环境变量
