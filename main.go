@@ -9,8 +9,8 @@ import (
     "net"
     "net/http"
     "net/http/httputil"
+    "net/url" // 导入 net/url 包
     "os"
-    "net/url"
     "os/exec"
     "regexp"
     "strings"
@@ -88,14 +88,15 @@ func proxyCmd(ctx *cli.Context) error {
         }
     }()
 
-    proxy := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: "file://" + uds})
+    targetURL, _ := url.Parse(fmt.Sprintf("http://file://%s", uds))
+    proxy := httputil.NewSingleHostReverseProxy(targetURL)
     proxy.Transport = &http.Transport{
         DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
             return net.Dial("unix", uds)
         },
     }
 
-    proxy.ModifyRequest = func(r *http.Request, _ *httputil.ProxyError) error {
+    proxy.Director = func(r *http.Request) {
         debugf("request: %v\n", r.URL.Path)
         r.URL.Scheme = "http"
         r.URL.Host = fmt.Sprintf("file://%s", uds)
@@ -126,7 +127,6 @@ func proxyCmd(ctx *cli.Context) error {
         }
         r.Header.Del("Referer")
         r.Header.Del("Origin")
-        return nil
     }
 
     err = http.ListenAndServe(fmt.Sprintf(":%d", port), proxy)
