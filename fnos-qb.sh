@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# 删除已存在的目录和文件
-if [ -d "fnos-qb-proxy" ]; then
-    echo "Deleting existing directory 'fnos-qb-proxy'..."
-    rm -rf fnos-qb-proxy
-fi
-
 # 提示用户输入端口号
 read -p "Please enter the port number: " PORT
 
