@@ -18,6 +18,21 @@ echo "Cloning repository from $REPO_URL..."
 git clone "$REPO_URL" fnos-qb-proxy
 cd fnos-qb-proxy
 
+# 检查是否安装了Go
+if ! command -v go &> /dev/null; then
+    echo "Go is not installed. Installing Go..."
+    # 根据操作系统安装Go
+    if [[ "$OSTYPE" == "linux"* ]]; then
+        sudo apt-get update
+        sudo apt-get install -y golang
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        brew install go
+    else
+        echo "Unsupported operating system: $OSTYPE"
+        exit 1
+    fi
+fi
+
 # 设置环境变量
 export FNOS_QB_PROXY_PORT=$PORT
 
