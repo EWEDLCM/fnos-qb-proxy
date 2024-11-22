@@ -13,6 +13,7 @@ import (
     "os/exec"
     "regexp"
     "strings"
+    "strconv" // 导入 strconv 包
     "time"
 
     "github.com/urfave/cli/v2"
@@ -86,46 +87,48 @@ func proxyCmd(ctx *cli.Context) error {
         }
     }()
 
-    proxy := httputil.ReverseProxy{
-        Transport: &http.Transport{
-            DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-                return net.Dial("unix", uds)
-            },
+    proxy := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: "file://" + uds})
+    proxy.Transport = &http.Transport{
+        DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+            return net.Dial("unix", uds)
         },
-        Rewrite: func(r *httputil.ProxyRequest) {
-            debugf("request: %v\n", r.In.URL.Path)
-            r.Out.URL.Scheme = "http"
-            r.Out.URL.Host = fmt.Sprintf("file://%s", uds)
-            r.Out.Host = fmt.Sprintf("file://%s", uds)
+    }
 
-            body, _ := io.ReadAll(r.In.Body)
-            r.In.ParseForm()
-            if strings.Contains(r.In.URL.Path, "/api/v2/auth/login") {
-                outPassword := password
-                if expectedPassword != "" {
-                    parts := strings.Split(string(body), "&")
-                    debugf("parts: %v\n", parts)
-                    for _, part := range parts {
-                        if strings.HasPrefix(part, "password=") {
-                            inputPassword := strings.TrimPrefix(part, "password=")
-                            if inputPassword != expectedPassword {
-                                outPassword = ""
-                                break
-                            }
+    proxy.ModifyRequest = func(r *http.Request, _ *httputil.ProxyError) error {
+        debugf("request: %v\n", r.URL.Path)
+        r.URL.Scheme = "http"
+        r.URL.Host = fmt.Sprintf("file://%s", uds)
+        r.Host = fmt.Sprintf("file://%s", uds)
+
+        body, _ := io.ReadAll(r.Body)
+        r.ParseForm()
+        if strings.Contains(r.URL.Path, "/api/v2/auth/login") {
+            outPassword := password
+            if expectedPassword != "" {
+                parts := strings.Split(string(body), "&")
+                debugf("parts: %v\n", parts)
+                for _, part := range parts {
+                    if strings.HasPrefix(part, "password=") {
+                        inputPassword := strings.TrimPrefix(part, "password=")
+                        if inputPassword != expectedPassword {
+                            outPassword = ""
+                            break
                         }
                     }
                 }
-
-                body = []byte(fmt.Sprintf("username=admin&password=%s", outPassword))
-                r.Out.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
-                r.Out.ContentLength = int64(len(body))
             }
-            r.Out.Header.Del("Referer")
-            r.Out.Header.Del("Origin")
-            r.Out.Body = io.NopCloser(bytes.NewBuffer(body))
-        },
+
+            body = []byte(fmt.Sprintf("username=admin&password=%s", outPassword))
+            r.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
+            r.ContentLength = int64(len(body))
+            r.Body = io.NopCloser(bytes.NewBuffer(body))
+        }
+        r.Header.Del("Referer")
+        r.Header.Del("Origin")
+        return nil
     }
-    err = http.ListenAndServe(fmt.Sprintf(":%d", port), &proxy)
+
+    err = http.ListenAndServe(fmt.Sprintf(":%d", port), proxy)
     if err != nil {
         return fmt.Errorf("listen and serve: %w", err)
     }
