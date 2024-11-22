@@ -3,13 +3,14 @@ package main
 import (
     "bytes"
     "context"
+    "flag"
     "fmt"
     "io"
     "log"
     "net"
     "net/http"
     "net/http/httputil"
-    "net/url" 
+    "net/url"
     "os"
     "os/exec"
     "regexp"
@@ -49,29 +50,35 @@ func watchQbPassword(ch chan string) {
     }
 }
 
-func proxyCmd(ctx *cli.Context) error {
-    uds := ctx.String("uds")
-    debug := ctx.Bool("debug")
+func main() {
+    uds := flag.String("uds", "/home/admin/qbt.sock", "qBittorrent unix domain socket(uds) path")
+    debug := flag.Bool("debug", false, "enable debug logging")
+    port := flag.Int("port", 8080, "proxy running port")
+    expectedPassword := flag.String("password", "", "if not set, any password will be accepted")
+
+    flag.Parse()
+
     portStr := os.Getenv("FNOS_QB_PROXY_PORT")
-    var port int
     if portStr != "" {
-        port, _ = strconv.Atoi(portStr)
-    } else {
-        port = ctx.Int("port")
-    }
-    expectedPassword := ctx.String("password")
-    password, err := fetchQbPassword()
-    if err != nil {
-        return fmt.Errorf("fetch qbittorrent-nox password: %w", err)
+        p, err := strconv.Atoi(portStr)
+        if err != nil {
+            log.Fatalf("invalid port number: %s", portStr)
+        }
+        *port = p
     }
 
-    debugf := func(format string, args ...any) {
-        if debug {
+    password, err := fetchQbPassword()
+    if err != nil {
+        log.Fatalf("fetch qbittorrent-nox password: %v", err)
+    }
+
+    debugf := func(format string, args ...interface{}) {
+        if *debug {
             fmt.Printf(format, args...)
         }
     }
 
-    fmt.Printf("proxy running on port %d\n", port)
+    fmt.Printf("proxy running on port %d\n", *port)
 
     ch := make(chan string)
     go watchQbPassword(ch)
@@ -86,19 +93,19 @@ func proxyCmd(ctx *cli.Context) error {
         }
     }()
 
-    targetURL, _ := url.Parse(fmt.Sprintf("http://file://%s", uds))
+    targetURL, _ := url.Parse(fmt.Sprintf("http://file://%s", *uds))
     proxy := httputil.NewSingleHostReverseProxy(targetURL)
     proxy.Transport = &http.Transport{
         DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-            return net.Dial("unix", uds)
+            return net.Dial("unix", *uds)
         },
     }
 
     proxy.Director = func(r *http.Request) {
         debugf("request: %v\n", r.URL.Path)
         r.URL.Scheme = "http"
-        r.URL.Host = fmt.Sprintf("file://%s", uds)
-        r.Host = fmt.Sprintf("file://%s", uds)
+        r.URL.Host = fmt.Sprintf("file://%s", *uds)
+        r.Host = fmt.Sprintf("file://%s", *uds)
 
         body := []byte{}
         if r.Body != nil {
@@ -109,13 +116,13 @@ func proxyCmd(ctx *cli.Context) error {
         r.ParseForm()
         if strings.Contains(r.URL.Path, "/api/v2/auth/login") {
             outPassword := password
-            if expectedPassword != "" {
+            if *expectedPassword != "" {
                 parts := strings.Split(string(body), "&")
                 debugf("parts: %v\n", parts)
                 for _, part := range parts {
                     if strings.HasPrefix(part, "password=") {
                         inputPassword := strings.TrimPrefix(part, "password=")
-                        if inputPassword != expectedPassword {
+                        if inputPassword != *expectedPassword {
                             outPassword = ""
                             break
                         }
@@ -132,45 +139,8 @@ func proxyCmd(ctx *cli.Context) error {
         r.Header.Del("Origin")
     }
 
-    err = http.ListenAndServe(fmt.Sprintf(":%d", port), proxy)
+    err = http.ListenAndServe(fmt.Sprintf(":%d", *port), proxy)
     if err != nil {
-        return fmt.Errorf("listen and serve: %w", err)
-    }
-    return nil
-}
-
-func main() {
-    app := &cli.App{
-        Name:   "fnos-qb-proxy",
-        Usage:  "fnos-qb-proxy is a proxy for qBittorrent in fnOS",
-        Action: proxyCmd,
-        Flags: []cli.Flag{
-            &cli.StringFlag{
-                Name:    "password",
-                Aliases: []string{"p"},
-                Usage:   "if not set, any password will be accepted",
-                Value:   "",
-            },
-            &cli.StringFlag{
-                Name:  "uds",
-                Usage: "qBittorrent unix domain socket(uds) path",
-                Value: "/home/admin/qbt.sock",
-            },
-            &cli.BoolFlag{
-                Name:    "debug",
-                Aliases: []string{"d"},
-                Value:   false,
-            },
-            &cli.IntFlag{
-                Name:  "port",
-                Usage: "proxy running port",
-                Value: 8080,
-            },
-        },
-    }
-
-    err := app.Run(os.Args)
-    if err != nil {
-        log.Fatal(err)
+        log.Fatalf("listen and serve: %v", err)
     }
 }
