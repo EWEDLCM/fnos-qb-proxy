@@ -9,15 +9,13 @@ import (
     "net"
     "net/http"
     "net/http/httputil"
-    "net/url" // 导入 net/url 包
+    "net/url" 
     "os"
     "os/exec"
     "regexp"
     "strings"
-    "strconv" // 导入 strconv 包
+    "strconv"
     "time"
-
-    "github.com/urfave/cli/v2"
 )
 
 func fetchQbPassword() (string, error) {
@@ -102,7 +100,12 @@ func proxyCmd(ctx *cli.Context) error {
         r.URL.Host = fmt.Sprintf("file://%s", uds)
         r.Host = fmt.Sprintf("file://%s", uds)
 
-        body, _ := io.ReadAll(r.Body)
+        body := []byte{}
+        if r.Body != nil {
+            body, _ = io.ReadAll(r.Body)
+            r.Body = io.NopCloser(bytes.NewBuffer(body))
+        }
+
         r.ParseForm()
         if strings.Contains(r.URL.Path, "/api/v2/auth/login") {
             outPassword := password
