@@ -90,10 +90,14 @@ func main() {
     defaultUDS := fmt.Sprintf("/home/%s/qbt.sock", user)
     uds := flag.String("uds", defaultUDS, "qBittorrent unix domain socket(uds) path")
     debug := flag.Bool("debug", false, "enable debug logging")
-    config := flag.String("config", "/vol1/1000/config/fnqb.conf", "path to the configuration file")
+    config := flag.String("config", "", "path to the configuration file")
     expectedPassword := flag.String("password", "", "if not set, any password will be accepted")
 
     flag.Parse()
+
+    if *config == "" {
+        log.Fatalf("configuration file path must be provided")
+    }
 
     port, err := readPortFromConfig(*config)
     if err != nil {
@@ -103,6 +107,7 @@ func main() {
     // Print the username and the socket path for debugging
     fmt.Printf("Current user: %s\n", user)
     fmt.Printf("Socket path: %s\n", *uds)
+    fmt.Printf("Listening on port: %d\n", port)
 
     // Check if the socket file exists
     if err := checkSocketFileExists(*uds); err != nil {
