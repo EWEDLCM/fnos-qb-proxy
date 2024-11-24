@@ -36,6 +36,7 @@ if [ "$LANG" == "zh" ]; then
             sudo systemctl disable fnos-qb-proxy
             sudo rm -f /etc/systemd/system/fnos-qb-proxy.service
             sudo rm -f /usr/local/bin/fnos-qb-proxy
+            sudo systemctl daemon-reload
             echo "现有服务和文件已删除。"
             exit 0
         else
@@ -50,11 +51,11 @@ if [ "$LANG" == "zh" ]; then
     # 提示用户输入配置文件路径
     echo "------------------------------------------------------------"
     echo "请输入端口配置文件存放位置"
-        echo "请注意vol后面的序号是否与你的存储空间对应，回车采用默认存放地址"
+    echo "请注意vol后面的序号是否与你的存储空间对应，回车采用默认存放地址"
     read -p "请输入配置文件路径 (默认: /vol1/1000/config/fnqb.conf): " CONFIG_FILE
     CONFIG_FILE=${CONFIG_FILE:-/vol1/1000/config/fnqb.conf}
 
-   # 检查配置文件是否存在，如果不存在则提示用户输入端口号
+    # 检查配置文件是否存在，如果不存在则提示用户输入端口号
     if [ ! -f "$CONFIG_FILE" ]; then
         echo "请输入端口号，请注意避免端口冲突，默认28080"
         read -p "请输入端口号 (默认: 28080): " PORT
@@ -132,7 +133,7 @@ if [ "$LANG" == "zh" ]; then
         exit 1
     fi
 
-    # 询问是否将服务添加到 systemd
+# 询问是否将服务添加到 systemd
     echo "------------------------------------------------------------"
     read -p "您想将服务添加到 systemd 吗？(yes/no): " ADD_TO_SYSTEMD
     ADD_TO_SYSTEMD=$(echo "$ADD_TO_SYSTEMD" | tr '[:upper:]' '[:lower:]')
@@ -142,11 +143,11 @@ if [ "$LANG" == "zh" ]; then
         SERVICE_FILE="/etc/systemd/system/fnos-qb-proxy.service"
         echo "[Unit]
 Description=fnOS qBittorrent Proxy Service
-After=docker.service
+After=network.target
 
 [Service]
 User=$USER
-ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --port $PORT
+ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \"$CONFIG_FILE\"
 Restart=always
 
 [Install]
@@ -159,9 +160,6 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
         sudo systemctl enable fnos-qb-proxy
         sudo systemctl start fnos-qb-proxy
 
-        # 检查服务状态
-        sudo systemctl status fnos-qb-proxy
-
         echo "fnos-qb-proxy 服务已成功添加到 systemd 并启动。"
         
         # 直接跳到最后的提示语
@@ -171,6 +169,7 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
     # 最后的提示语
     echo "------------------------------------------------------------"
     read -p "脚本结束，按回车键可退出脚本"
+fi
 
 elif [ "$LANG" == "en" ]; then
     # Display prompts
@@ -192,6 +191,7 @@ elif [ "$LANG" == "en" ]; then
             sudo systemctl disable fnos-qb-proxy
             sudo rm -f /etc/systemd/system/fnos-qb-proxy.service
             sudo rm -f /usr/local/bin/fnos-qb-proxy
+            sudo systemctl daemon-reload
             echo "Existing service and files have been deleted."
             exit 0
         else
@@ -299,7 +299,7 @@ After=docker.service
 
 [Service]
 User=$USER
-ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --port $PORT
+ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \"$CONFIG_FILE\"
 Restart=always
 
 [Install]
@@ -320,22 +320,6 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
         # Directly jump to the final prompt
         read -p "Script finished, press Enter to exit the script"
         exit 0
-    fi
-
-    # Ensure qbt.sock file exists
-    QBT_SOCK="/home/$USER/qbt.sock"
-    if [ ! -S "$QBT_SOCK" ]; then
-        echo "qbt.sock file does not exist at $QBT_SOCK. Please ensure qBittorrent is configured to use this socket."
-        exit 1
-    fi
-
-    # Ask if the user wants to run the service immediately
-    read -p "Do you want to run the service now? (yes/no): " RUN_SERVICE
-    RUN_SERVICE=$(echo "$RUN_SERVICE" | tr '[:upper:]' '[:lower:]')
-
-    if [ "$RUN_SERVICE" == "yes" ]; then
-        echo "Running fnos-qb-proxy on port $PORT..."
-        ./fnos-qb-proxy_linux-amd64 --uds "$QBT_SOCK" --port $PORT
     fi
 
     # Final prompt
