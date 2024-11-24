@@ -52,8 +52,8 @@ if [ "$LANG" == "zh" ]; then
     echo "------------------------------------------------------------"
     echo "请输入端口配置文件存放位置"
     echo "请注意vol后面的序号是否与你的存储空间对应，回车采用默认存放地址"
-    read -p "请输入配置文件路径 (默认: /vol1/1000/config/fnqb.conf): " CONFIG_FILE
-    CONFIG_FILE=${CONFIG_FILE:-/vol1/1000/config/fnqb.conf}
+    read -p "请输入配置文件路径 (默认: /vol1/1000/config/fnos-aria2.conf): " CONFIG_FILE
+    CONFIG_FILE=${CONFIG_FILE:-/vol1/1000/config/fnos-aria2.conf}
 
     # 检查配置文件是否存在，如果不存在则提示用户输入端口号
     if [ ! -f "$CONFIG_FILE" ]; then
@@ -123,7 +123,7 @@ if [ "$LANG" == "zh" ]; then
     go mod download
 
     # 编译Go程序
-    GOOS=linux GOARCH=amd64 go build -o fnos-qb-proxy_linux-amd64
+    GOOS=linux GOARCH=amd64 go build -o fnos-aria2-proxy
 
     # 检查编译结果
     if [ $? -eq 0 ]; then
@@ -140,27 +140,27 @@ if [ "$LANG" == "zh" ]; then
 
     if [ "$ADD_TO_SYSTEMD" == "yes" ]; then
         # 创建 systemd 服务文件
-        SERVICE_FILE="/etc/systemd/system/fnos-qb-proxy.service"
+        SERVICE_FILE="/etc/systemd/system/fnos-aria2-proxy.service"
         echo "[Unit]
-Description=fnOS qBittorrent Proxy Service
+Description=fnOS Aria2 Proxy Service
 After=network.target
 
 [Service]
 User=$USER
-ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \"$CONFIG_FILE\"
+ExecStart=/usr/local/bin/fnos-aria2-proxy --uds \"/home/$USER/aria2.sock\" --config \"$CONFIG_FILE\"
 Restart=always
 
 [Install]
 WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
 
         # 将编译后的程序文件移动到 /usr/local/bin
-        sudo mv fnos-qb-proxy_linux-amd64 /usr/local/bin/fnos-qb-proxy
+        sudo mv fnos-aria2-proxy /usr/local/bin/fnos-aria2-proxy
         # 启用并启动服务
         sudo systemctl daemon-reload
-        sudo systemctl enable fnos-qb-proxy
-        sudo systemctl start fnos-qb-proxy
+        sudo systemctl enable fnos-aria2-proxy
+        sudo systemctl start fnos-aria2-proxy
 
-        echo "fnos-qb-proxy 服务已成功添加到 systemd 并启动。"
+        echo "fnos-aria2-proxy 服务已成功添加到 systemd 并启动。"
         
         # 直接跳到最后的提示语
         read -p "脚本结束，按回车键可退出脚本"
@@ -170,17 +170,16 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
     echo "------------------------------------------------------------"
     read -p "脚本结束，按回车键可退出脚本"
     exit 0
-elif [ "$LANG" == "en" ]; then
-    # Display prompts
-    echo "This project is based on the fnos-qb-proxy project modified by xxxuuu"
-    echo " Thank you for your contribution"
-    echo "This script aims to facilitate user customization, adding functions to install and uninstall services"
-    echo "Please follow the script prompts"
+else
+    # 英文提示语
+    echo "--This project is based on the fnos-qb-proxy project modified by xxxuuu, thank you for your contribution--"
+    echo "-----This script aims to facilitate user customization, adding installation and uninstallation service functions-----"
+    echo "-------------------Please follow the script prompts---------------------"
     echo "------------------------------------------------------------"
 
-    # Check if the system contains the fnos-qb-proxy service
+    # 检测系统内是否含有fnos-qb-proxy服务
     if systemctl list-unit-files | grep -q "fnos-qb-proxy.service"; then
-        echo "The service already exists in the system"
+        echo "The service already exists in the system, do you want to delete it?"
         echo "yes: Delete the service and exit the script; no: Exit the script directly"
         read -p "Do you want to delete the existing service and files? (yes/no): " DELETE_SERVICE
         DELETE_SERVICE=$(echo "$DELETE_SERVICE" | tr '[:upper:]' '[:lower:]')
@@ -199,59 +198,61 @@ elif [ "$LANG" == "en" ]; then
         fi
     fi
 
-    # Get current username
+    # 获取当前用户名
     USER=$(whoami)
 
-    # Prompt user to input configuration file path
-    echo "Please enter the location to store the port configuration file, note the number after vol should match your storage space, press Enter to use the default location"
-    read -p "Please enter the configuration file path (default: /vol1/1000/config/fnqb.conf): " CONFIG_FILE
-    CONFIG_FILE=${CONFIG_FILE:-/vol1/1000/config/fnqb.conf}
+    # 提示用户输入配置文件路径
+    echo "------------------------------------------------------------"
+    echo "Please enter the location of the port configuration file"
+    echo "Note the vol number after the vol, which should correspond to your storage space. Press Enter to use the default location"
+    read -p "Enter the configuration file path (default: /vol1/1000/config/fnos-aria2.conf): " CONFIG_FILE
+    CONFIG_FILE=${CONFIG_FILE:-/vol1/1000/config/fnos-aria2.conf}
 
-    # Check if the configuration file exists, if not prompt the user to enter the port number
+    # 检查配置文件是否存在，如果不存在则提示用户输入端口号
     if [ ! -f "$CONFIG_FILE" ]; then
-        echo "Please enter the port number, be aware of port conflicts, default 28080"
-        read -p "Please enter the port number (default: 28080): " PORT
-        # Check if a port number was provided, if not use the default value
+        echo "Please enter the port number, note to avoid port conflicts, default 28080"
+        read -p "Enter the port number (default: 28080): " PORT
+        # 检查是否提供了端口号，如果没有提供则使用默认值
         PORT=${PORT:-28080}
-        # Create the configuration file directory
+        # 创建配置文件目录
         mkdir -p "$(dirname $CONFIG_FILE)"
-        # Write to the configuration file
+        # 写入配置文件
         echo "port=$PORT" > "$CONFIG_FILE"
         echo "Configuration file created at $CONFIG_FILE"
     else
-        # Ask if the user wants to use the existing configuration file
-        read -p "Do you want to use the existing configuration file? (yes/no): " USE_EXISTING_CONFIG
+        # 询问是否直接采用现有配置文件
+        read -p "Do you want to use the existing configuration file directly? (yes/no): " USE_EXISTING_CONFIG
         USE_EXISTING_CONFIG=$(echo "$USE_EXISTING_CONFIG" | tr '[:upper:]' '[:lower:]')
         if [ "$USE_EXISTING_CONFIG" == "yes" ]; then
-            # Read the port number from the configuration file
+            # 读取配置文件中的端口号
             PORT=$(grep -Po '(?<=port=)\d+' "$CONFIG_FILE")
             if [ -z "$PORT" ]; then
                 echo "Invalid port number in configuration file: $CONFIG_FILE"
                 exit 1
             fi
         else
-            echo "Please enter the port number, be aware of port conflicts, default 28080"
-            read -p "Please enter the port number (default: 28080): " PORT
-            # Check if a port number was provided, if not use the default value
+            echo "Please enter the port number, note to avoid port conflicts, default 28080"
+            read -p "Enter the port number (default: 28080): " PORT
+            # 检查是否提供了端口号，如果没有提供则使用默认值
             PORT=${PORT:-28080}
-            # Update the port number in the configuration file
+            # 更新配置文件中的端口号
             sed -i "s/^port=.*/port=$PORT/" "$CONFIG_FILE"
             echo "Configuration file updated: $CONFIG_FILE"
         fi
     fi
 
-    echo "Fetching the project, estimated total size 10mb"
-    # Get repository URL, default to your GitHub repository
+    echo "Cloning the project, expected total size is 10mb"
+    # 获取仓库URL，默认为你的GitHub仓库
     REPO_URL="https://github.com/EWEDLCM/fnos-qb-proxy.git"
 
-    # Clone repository
+    # 克隆仓库
     git clone "$REPO_URL" fnos-qb-proxy
     cd fnos-qb-proxy
 
-    # Check if Go is installed
+    # 检查是否安装了Go
     if ! command -v go &> /dev/null; then
         echo "Go is not installed. Installing Go..."
-        # Install Go based on the operating system
+        # 根据操作系统安装Go
         if [[ "$OSTYPE" == "linux"* ]]; then
             sudo apt-get update
             sudo apt-get install -y golang
@@ -263,63 +264,63 @@ elif [ "$LANG" == "en" ]; then
         fi
     fi
 
-    # Remove Go version declaration from go.mod file
+    # 移除 go.mod 文件中的 Go 版本声明
     if grep -q '^go ' go.mod; then
         sed -i '/^go /d' go.mod
-        echo "Removed go version declaration from go.mod"
+        echo "Removed Go version declaration from go.mod"
     else
-        echo "No go version declaration found in go.mod"
+        echo "No Go version declaration found in go.mod"
     fi
 
-    # Download all dependencies and update go.sum file
+    # 下载所有依赖项并更新 go.sum 文件
     go mod download
 
-    # Compile Go program
-    GOOS=linux GOARCH=amd64 go build -o fnos-qb-proxy_linux-amd64
+    # 编译Go程序
+    GOOS=linux GOARCH=amd64 go build -o fnos-aria2-proxy
 
-    # Check compilation result
+    # 检查编译结果
     if [ $? -eq 0 ]; then
-        echo "Compilation successful!"
+        echo "Build successful!"
     else
-        echo "Compilation failed!"
+        echo "Build failed!"
         exit 1
     fi
 
-    # Ask if the user wants to add the service to systemd
+    # 询问是否将服务添加到 systemd
+    echo "------------------------------------------------------------"
     read -p "Do you want to add the service to systemd? (yes/no): " ADD_TO_SYSTEMD
     ADD_TO_SYSTEMD=$(echo "$ADD_TO_SYSTEMD" | tr '[:upper:]' '[:lower:]')
 
     if [ "$ADD_TO_SYSTEMD" == "yes" ]; then
-        # Create systemd service file
-        SERVICE_FILE="/etc/systemd/system/fnos-qb-proxy.service"
+        # 创建 systemd 服务文件
+        SERVICE_FILE="/etc/systemd/system/fnos-aria2-proxy.service"
         echo "[Unit]
-Description=fnOS qBittorrent Proxy Service
+Description=fnOS Aria2 Proxy Service
 After=network.target
 
 [Service]
 User=$USER
-ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \"$CONFIG_FILE\"
+ExecStart=/usr/local/bin/fnos-aria2-proxy --uds \"/home/$USER/aria2.sock\" --config \"$CONFIG_FILE\"
 Restart=always
 
 [Install]
 WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
 
-        # Move binary file to /usr/local/bin
-        sudo mv fnos-qb-proxy_linux-amd64 /usr/local/bin/fnos-qb-proxy
-        # Enable and start the service
+        # 将编译后的程序文件移动到 /usr/local/bin
+        sudo mv fnos-aria2-proxy /usr/local/bin/fnos-aria2-proxy
+        # 启用并启动服务
         sudo systemctl daemon-reload
-        sudo systemctl enable fnos-qb-proxy
-        sudo systemctl start fnos-qb-proxy
+        sudo systemctl enable fnos-aria2-proxy
+        sudo systemctl start fnos-aria2-proxy
 
-        echo "fnos-qb-proxy service has been successfully added to systemd and started."
+        echo "fnos-aria2-proxy service has been successfully added to systemd and started."
         
-        # Directly jump to the final prompt
-        read -p "Script finished, press Enter to exit the script"
+        # 直接跳到最后的提示语
+        read -p "Script ended, press Enter to exit the script"
         exit 0
     fi
-
-    # Final prompt
+    # 最后的提示语
     echo "------------------------------------------------------------"
-    read -p "Script finished, press Enter to exit the script"
+    read -p "Script ended, press Enter to exit the script"
     exit 0
 fi
