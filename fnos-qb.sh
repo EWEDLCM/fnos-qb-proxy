@@ -133,7 +133,7 @@ if [ "$LANG" == "zh" ]; then
         exit 1
     fi
 
-# 询问是否将服务添加到 systemd
+    # 询问是否将服务添加到 systemd
     echo "------------------------------------------------------------"
     read -p "您想将服务添加到 systemd 吗？(yes/no): " ADD_TO_SYSTEMD
     ADD_TO_SYSTEMD=$(echo "$ADD_TO_SYSTEMD" | tr '[:upper:]' '[:lower:]')
@@ -169,12 +169,11 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
     # 最后的提示语
     echo "------------------------------------------------------------"
     read -p "脚本结束，按回车键可退出脚本"
-fi
-
+    exit 0
 elif [ "$LANG" == "en" ]; then
     # Display prompts
     echo "This project is based on the fnos-qb-proxy project modified by xxxuuu"
-    echo " thank you for your contribution"
+    echo " Thank you for your contribution"
     echo "This script aims to facilitate user customization, adding functions to install and uninstall services"
     echo "Please follow the script prompts"
     echo "------------------------------------------------------------"
@@ -295,7 +294,7 @@ elif [ "$LANG" == "en" ]; then
         SERVICE_FILE="/etc/systemd/system/fnos-qb-proxy.service"
         echo "[Unit]
 Description=fnOS qBittorrent Proxy Service
-After=docker.service
+After=network.target
 
 [Service]
 User=$USER
@@ -312,9 +311,6 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
         sudo systemctl enable fnos-qb-proxy
         sudo systemctl start fnos-qb-proxy
 
-        # Check service status
-        sudo systemctl status fnos-qb-proxy
-
         echo "fnos-qb-proxy service has been successfully added to systemd and started."
         
         # Directly jump to the final prompt
@@ -323,5 +319,7 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
     fi
 
     # Final prompt
+    echo "------------------------------------------------------------"
     read -p "Script finished, press Enter to exit the script"
+    exit 0
 fi
