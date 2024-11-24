@@ -19,44 +19,47 @@ import (
     "time"
 )
 
-func fetchQbPassword() (string, error) {
-    // exec command "ps aux | grep [q]bittorrent-nox"
-    cmd := exec.Command("bash", "-c", "ps aux | grep [q]bittorrent-nox")
+// fetchAria2Token retrieves the token from the Aria2 process.
+func fetchAria2Token() (string, error) {
+    // Execute command "ps aux | grep [a]ria2c"
+    cmd := exec.Command("bash", "-c", "ps aux | grep [a]ria2c")
     output, err := cmd.Output()
     if err != nil {
         return "", fmt.Errorf("exec command %s: %w", cmd.String(), err)
     }
 
-    // parse output(likes --webui-password=xxx) to get password
-    re := regexp.MustCompile(`--webui-password=(\S+)`)
+    // Parse output (like --rpc-secret=xxx) to get token
+    re := regexp.MustCompile(`--rpc-secret=(\S+)`)
     matches := re.FindStringSubmatch(string(output))
     if len(matches) > 1 {
         return matches[1], nil
     }
 
-    return "", fmt.Errorf("no qbittorrent-nox process found")
+    return "", fmt.Errorf("no aria2c process found with a token")
 }
 
-func watchQbPassword(ch chan string) {
+// watchAria2Token watches for changes in the Aria2 token.
+func watchAria2Token(ch chan string) {
     ticker := time.NewTicker(1 * time.Second)
     for range ticker.C {
-        password, err := fetchQbPassword()
+        token, err := fetchAria2Token()
         if err != nil {
-            fmt.Printf("fetch qbittorrent-nox password: %v\n", err)
+            fmt.Printf("fetch aria2c token: %v\n", err)
             continue
         }
 
-        ch <- password
+        ch <- token
     }
 }
 
+// readPortFromConfig reads the port from the Aria2 configuration file.
 func readPortFromConfig(configFile string) (int, error) {
     content, err := os.ReadFile(configFile)
     if err != nil {
         return 0, fmt.Errorf("failed to read config file %s: %w", configFile, err)
     }
 
-    re := regexp.MustCompile(`port=(\d+)`)
+    re := regexp.MustCompile(`--rpc-listen-port=(\d+)`)
     matches := re.FindStringSubmatch(string(content))
     if len(matches) > 1 {
         port, err := strconv.Atoi(matches[1])
@@ -69,6 +72,7 @@ func readPortFromConfig(configFile string) (int, error) {
     return 0, fmt.Errorf("no valid port number found in config file %s", configFile)
 }
 
+// checkSocketFileExists checks if the socket file exists.
 func checkSocketFileExists(socketPath string) error {
     _, err := os.Stat(socketPath)
     if err != nil {
@@ -81,43 +85,17 @@ func checkSocketFileExists(socketPath string) error {
     return nil
 }
 
-func heartbeat(socketPath string) {
-    ticker := time.NewTicker(5 * time.Minute)
-    for range ticker.C {
-        conn, err := net.Dial("unix", socketPath)
-        if err != nil {
-            log.Printf("failed to connect to socket %s for heartbeat: %v", socketPath, err)
-            continue
-        }
-        defer conn.Close()
-
-        // Send a simple heartbeat request
-        _, err = conn.Write([]byte("HEARTBEAT"))
-        if err != nil {
-            log.Printf("failed to send heartbeat to socket %s: %v", socketPath, err)
-            continue
-        }
-
-        // Optionally, read a response
-        buffer := make([]byte, 1024)
-        _, err = conn.Read(buffer)
-        if err != nil {
-            log.Printf("failed to read response from socket %s: %v", socketPath, err)
-        }
-    }
-}
-
 func main() {
     user := os.Getenv("USER")
     if user == "" {
         log.Fatalf("environment variable USER is not set")
     }
 
-    defaultUDS := fmt.Sprintf("/home/%s/qbt.sock", user)
-    uds := flag.String("uds", defaultUDS, "qBittorrent unix domain socket(uds) path")
+    defaultUDS := fmt.Sprintf("/home/%s/aria2.sock", user)
+    uds := flag.String("uds", defaultUDS, "Aria2 unix domain socket(uds) path")
     debug := flag.Bool("debug", false, "enable debug logging")
     config := flag.String("config", "", "path to the configuration file")
-    expectedPassword := flag.String("password", "", "if not set, any password will be accepted")
+    expectedToken := flag.String("token", "", "if not set, any token will be accepted")
 
     flag.Parse()
 
@@ -135,18 +113,14 @@ func main() {
     fmt.Printf("Socket path: %s\n", *uds)
     fmt.Printf("Listening on port: %d\n", port)
 
-    // Wait for the socket file to appear
-    for {
-        if err := checkSocketFileExists(*uds); err == nil {
-            break
-        }
-        fmt.Printf("Waiting for socket file %s to appear...\n", *uds)
-        time.Sleep(1 * time.Second)
+    // Check if the socket file exists
+    if err := checkSocketFileExists(*uds); err != nil {
+        log.Fatalf("failed to start: %v", err)
     }
 
-    password, err := fetchQbPassword()
+    token, err := fetchAria2Token()
     if err != nil {
-        log.Fatalf("fetch qbittorrent-nox password: %v", err)
+        log.Fatalf("fetch aria2c token: %v", err)
     }
 
     debugf := func(format string, args ...interface{}) {
@@ -158,20 +132,17 @@ func main() {
     fmt.Printf("proxy running on port %d\n", port)
 
     ch := make(chan string)
-    go watchQbPassword(ch)
+    go watchAria2Token(ch)
     go func() {
-        for newPassword := range ch {
-            if newPassword == password {
+        for newToken := range ch {
+            if newToken == token {
                 continue
             }
 
-            password = newPassword
-            fmt.Printf("new password: %s\n", password)
+            token = newToken
+            fmt.Printf("new token: %s\n", token)
         }
     }()
-
-    // Start the heartbeat function
-    go heartbeat(*uds)
 
     targetURL, _ := url.Parse(fmt.Sprintf("http://file://%s", *uds))
     proxy := httputil.NewSingleHostReverseProxy(targetURL)
@@ -199,23 +170,13 @@ func main() {
         }
 
         r.ParseForm()
-        if strings.Contains(r.URL.Path, "/api/v2/auth/login") {
-            outPassword := password
-            if *expectedPassword != "" {
-                parts := strings.Split(string(body), "&")
-                debugf("parts: %v\n", parts)
-                for _, part := range parts {
-                    if strings.HasPrefix(part, "password=") {
-                        inputPassword := strings.TrimPrefix(part, "password=")
-                        if inputPassword != *expectedPassword {
-                            outPassword = ""
-                            break
-                        }
-                    }
-                }
+        if strings.Contains(r.URL.Path, "/jsonrpc") && *expectedToken != "" {
+            // Add token to the request body
+            bodyStr := string(body)
+            if !strings.Contains(bodyStr, `"token":"`) {
+                bodyStr = fmt.Sprintf(`{"token":"%s"}`, *expectedToken) + bodyStr
+                body = []byte(bodyStr)
             }
-
-            body = []byte(fmt.Sprintf("username=admin&password=%s", outPassword))
             r.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
             r.ContentLength = int64(len(body))
             r.Body = io.NopCloser(bytes.NewBuffer(body))
