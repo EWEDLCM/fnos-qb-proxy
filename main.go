@@ -81,6 +81,32 @@ func checkSocketFileExists(socketPath string) error {
     return nil
 }
 
+func heartbeat(socketPath string) {
+    ticker := time.NewTicker(5 * time.Minute)
+    for range ticker.C {
+        conn, err := net.Dial("unix", socketPath)
+        if err != nil {
+            log.Printf("failed to connect to socket %s for heartbeat: %v", socketPath, err)
+            continue
+        }
+        defer conn.Close()
+
+        // Send a simple heartbeat request
+        _, err = conn.Write([]byte("HEARTBEAT"))
+        if err != nil {
+            log.Printf("failed to send heartbeat to socket %s: %v", socketPath, err)
+            continue
+        }
+
+        // Optionally, read a response
+        buffer := make([]byte, 1024)
+        _, err = conn.Read(buffer)
+        if err != nil {
+            log.Printf("failed to read response from socket %s: %v", socketPath, err)
+        }
+    }
+}
+
 func main() {
     user := os.Getenv("USER")
     if user == "" {
@@ -109,9 +135,13 @@ func main() {
     fmt.Printf("Socket path: %s\n", *uds)
     fmt.Printf("Listening on port: %d\n", port)
 
-    // Check if the socket file exists
-    if err := checkSocketFileExists(*uds); err != nil {
-        log.Fatalf("failed to start: %v", err)
+    // Wait for the socket file to appear
+    for {
+        if err := checkSocketFileExists(*uds); err == nil {
+            break
+        }
+        fmt.Printf("Waiting for socket file %s to appear...\n", *uds)
+        time.Sleep(1 * time.Second)
     }
 
     password, err := fetchQbPassword()
@@ -139,6 +169,9 @@ func main() {
             fmt.Printf("new password: %s\n", password)
         }
     }()
+
+    // Start the heartbeat function
+    go heartbeat(*uds)
 
     targetURL, _ := url.Parse(fmt.Sprintf("http://file://%s", *uds))
     proxy := httputil.NewSingleHostReverseProxy(targetURL)
