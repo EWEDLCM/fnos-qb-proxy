@@ -50,21 +50,63 @@ func watchQbPassword(ch chan string) {
     }
 }
 
+func readPortFromConfig(configFile string) (int, error) {
+    content, err := os.ReadFile(configFile)
+    if err != nil {
+        return 0, fmt.Errorf("failed to read config file %s: %w", configFile, err)
+    }
+
+    re := regexp.MustCompile(`port=(\d+)`)
+    matches := re.FindStringSubmatch(string(content))
+    if len(matches) > 1 {
+        port, err := strconv.Atoi(matches[1])
+        if err != nil {
+            return 0, fmt.Errorf("invalid port number in config file %s: %w", configFile, err)
+        }
+        return port, nil
+    }
+
+    return 0, fmt.Errorf("no valid port number found in config file %s", configFile)
+}
+
+func checkSocketFileExists(socketPath string) error {
+    _, err := os.Stat(socketPath)
+    if err != nil {
+        if os.IsNotExist(err) {
+            return fmt.Errorf("socket file %s does not exist", socketPath)
+        }
+        return fmt.Errorf("error checking socket file %s: %v", socketPath, err)
+    }
+
+    return nil
+}
+
 func main() {
-    uds := flag.String("uds", "/home/admin/qbt.sock", "qBittorrent unix domain socket(uds) path")
+    user := os.Getenv("USER")
+    if user == "" {
+        log.Fatalf("environment variable USER is not set")
+    }
+
+    defaultUDS := fmt.Sprintf("/home/%s/qbt.sock", user)
+    uds := flag.String("uds", defaultUDS, "qBittorrent unix domain socket(uds) path")
     debug := flag.Bool("debug", false, "enable debug logging")
-    port := flag.Int("port", 8080, "proxy running port")
+    config := flag.String("config", "/vol1/1000/config/fnqb.conf", "path to the configuration file")
     expectedPassword := flag.String("password", "", "if not set, any password will be accepted")
 
     flag.Parse()
 
-    portStr := os.Getenv("FNOS_QB_PROXY_PORT")
-    if portStr != "" {
-        p, err := strconv.Atoi(portStr)
-        if err != nil {
-            log.Fatalf("invalid port number: %s", portStr)
-        }
-        *port = p
+    port, err := readPortFromConfig(*config)
+    if err != nil {
+        log.Fatalf("failed to read port from config file: %v", err)
+    }
+
+    // Print the username and the socket path for debugging
+    fmt.Printf("Current user: %s\n", user)
+    fmt.Printf("Socket path: %s\n", *uds)
+
+    // Check if the socket file exists
+    if err := checkSocketFileExists(*uds); err != nil {
+        log.Fatalf("failed to start: %v", err)
     }
 
     password, err := fetchQbPassword()
@@ -78,7 +120,7 @@ func main() {
         }
     }
 
-    fmt.Printf("proxy running on port %d\n", *port)
+    fmt.Printf("proxy running on port %d\n", port)
 
     ch := make(chan string)
     go watchQbPassword(ch)
@@ -97,7 +139,12 @@ func main() {
     proxy := httputil.NewSingleHostReverseProxy(targetURL)
     proxy.Transport = &http.Transport{
         DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-            return net.Dial("unix", *uds)
+            conn, err := net.Dial("unix", *uds)
+            if err != nil {
+                log.Printf("failed to connect to socket %s: %v", *uds, err)
+                return nil, err
+            }
+            return conn, nil
         },
     }
 
@@ -134,12 +181,18 @@ func main() {
             r.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
             r.ContentLength = int64(len(body))
             r.Body = io.NopCloser(bytes.NewBuffer(body))
+        } else {
+            // Ensure the original body is used if not modifying it
+            r.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
+            r.ContentLength = int64(len(body))
+            r.Body = io.NopCloser(bytes.NewBuffer(body))
         }
+
         r.Header.Del("Referer")
         r.Header.Del("Origin")
     }
 
-    err = http.ListenAndServe(fmt.Sprintf(":%d", *port), proxy)
+    err = http.ListenAndServe(fmt.Sprintf(":%d", port), proxy)
     if err != nil {
         log.Fatalf("listen and serve: %v", err)
     }
