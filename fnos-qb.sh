@@ -94,16 +94,25 @@ if [ "$LANG" == "zh" ]; then
     echo "请输入仓库 URL，默认为 https://github.com/EWEDLCM/fnos-qb-proxy.git"
     read -p "请输入仓库 URL (直接回车保持默认): " REPO_URL
     REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
+    while true; do
+        echo "克隆仓库 $REPO_URL 到 fnos-qb-proxy 目录中..."
+        git clone --depth 1 "$REPO_URL" fnos-qb-proxy
 
-    # 克隆仓库，使用浅克隆
-    echo "克隆仓库 $REPO_URL 到 fnos-qb-proxy 目录中..."
-    git clone --depth 1 "$REPO_URL" fnos-qb-proxy
-
-    # 检查克隆是否成功
-    if [ $? -ne 0 ]; then
-        echo "克隆仓库失败，请检查输入的仓库 URL 是否正确。"
-        exit 1
-    fi
+        # 检查克隆是否成功
+        if [ $? -eq 0 ]; then
+            break
+        else
+            echo "克隆仓库失败，请检查输入的仓库 URL 是否正确。"
+            read -p "是否重新输入仓库 URL？(yes/no): " TRY_AGAIN
+            TRY_AGAIN=$(echo "$TRY_AGAIN" | tr '[:upper:]' '[:lower:]')
+            if [ "$TRY_AGAIN" == "yes" ]; then
+                read -p "请输入新的仓库 URL: " REPO_URL
+            else
+                echo "退出脚本。"
+                exit 1
+            fi
+        fi
+    done
     cd fnos-qb-proxy
 
     # 检查是否安装了Go
