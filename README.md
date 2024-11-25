@@ -17,7 +17,7 @@ curl -s https://raw.githubusercontent.com/EWEDLCM/fnos-qb-proxy/main/fnos-qb.sh 
 ```
 或者使用加速链接
 ```
-curl -s https://gh.api.99988866.xyz/https://raw.githubusercontent.com/EWEDLCM/fnos-qb-proxy/main/fnos-qb.sh -o fnos-qb.sh && chmod +x fnos-qb.sh && ./fnos-qb.sh
+curl -s https://cdn.jsdelivr.net/gh/EWEDLCM/fnos-qb-proxy@main/fnos-qb.sh -o fnos-qb.sh && chmod +x fnos-qb.sh && ./fnos-qb.sh
 ```
 
 ## 注意事项
