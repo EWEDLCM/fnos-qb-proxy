@@ -91,11 +91,20 @@ if [ "$LANG" == "zh" ]; then
     fi
 
     echo "正在拉取项目中，预计总占用10mb"
-    # 获取仓库URL，默认为你的GitHub仓库
-    REPO_URL="https://github.com/EWEDLCM/fnos-qb-proxy.git"
+    echo "正在拉取项目中，预计总占用10mb"
+    echo "请输入仓库 URL，默认为 https://github.com/EWEDLCM/fnos-qb-proxy.git"
+    read -p "请输入仓库 URL (直接回车保持默认): " REPO_URL
+    REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
 
-    # 克隆仓库
-    git clone "$REPO_URL" fnos-qb-proxy
+    # 克隆仓库，使用浅克隆
+    echo "克隆仓库 $REPO_URL 到 fnos-qb-proxy 目录中..."
+    git clone --depth 1 "$REPO_URL" fnos-qb-proxy
+
+    # 检查克隆是否成功
+    if [ $? -ne 0 ]; then
+        echo "克隆仓库失败，请检查输入的仓库 URL 是否正确。"
+        exit 1
+    fi
     cd fnos-qb-proxy
 
     # 检查是否安装了Go
