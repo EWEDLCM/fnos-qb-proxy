@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # 选择语言
 echo "请选择语言(Please select a language)："
 echo "1. 中文"
@@ -91,24 +89,26 @@ if [ "$LANG" == "zh" ]; then
     fi
 
     echo "正在拉取项目中，预计总占用10mb"
-    echo "请输入仓库 URL，默认为 https://github.com/EWEDLCM/fnos-qb-proxy.git"
+    echo "请输入仓库 URL，默认为 https://gitee.com/ewedl/fnos-qb-proxy.git"
     read -p "请输入仓库 URL (直接回车保持默认): " REPO_URL
-    REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
+    REPO_URL=${REPO_URL:-https://gitee.com/ewedl/fnos-qb-proxy.git}
 
-    # 克隆仓库，使用浅克隆
+    # 克隆仓库
     echo "克隆仓库 $REPO_URL 到 fnos-qb-proxy 目录中..."
     git clone --depth 1 "$REPO_URL" fnos-qb-proxy
 
     # 检查克隆是否成功
     if [ $? -ne 0 ]; then
-        echo "克隆仓库失败，请检查输入的仓库 URL 是否正确。"
+        echo "克隆仓库失败，请检查文件夹是否已存在以及输入的仓库 URL 是否正确。"
         exit 1
     fi
     cd fnos-qb-proxy
-
+    export GOPROXY=https://mirrors.aliyun.com/goproxy/
+    echo "后续操作可能需要输入管理员密码！！"
     # 检查是否安装了Go
     if ! command -v go &> /dev/null; then
         echo "未安装Go。正在安装Go..."
+        echo "请输入管理员密码！！"
         # 根据操作系统安装Go
         if [[ "$OSTYPE" == "linux"* ]]; then
             sudo apt-get update
@@ -156,6 +156,8 @@ After=network.target
 
 [Service]
 User=$USER
+ConditionPathExists=!/home/$USER/qbt.sock
+ExecStartPre=/bin/sleep 30
 ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \"$CONFIG_FILE\"
 Restart=always
 
@@ -189,7 +191,7 @@ elif [ "$LANG" == "en" ]; then
 
     # Check if the system contains the fnos-qb-proxy service
     if systemctl list-unit-files | grep -q "fnos-qb-proxy.service"; then
-        echo "The service already exists in the system"
+        echo "The service already exists in the system, do you want to delete it?"
         echo "yes: Delete the service and exit the script; no: Exit the script directly"
         read -p "Do you want to delete the existing service and files? (yes/no): " DELETE_SERVICE
         DELETE_SERVICE=$(echo "$DELETE_SERVICE" | tr '[:upper:]' '[:lower:]')
@@ -211,62 +213,68 @@ elif [ "$LANG" == "en" ]; then
     # Get current username
     USER=$(whoami)
 
-    # Prompt user to input configuration file path
-    echo "Please enter the location to store the port configuration file, note the number after vol should match your storage space, press Enter to use the default location"
+    # Prompt user to input config file path
+    echo "------------------------------------------------------------"
+    echo "Please enter the location where the port configuration file will be stored"
+    echo "Note the number after vol should correspond to your storage space, press Enter to use the default location"
     read -p "Please enter the configuration file path (default: /vol1/1000/config/fnqb.conf): " CONFIG_FILE
     CONFIG_FILE=${CONFIG_FILE:-/vol1/1000/config/fnqb.conf}
 
-    # Check if the configuration file exists, if not prompt the user to enter the port number
+    # Check if config file exists, prompt user to enter port number if not
     if [ ! -f "$CONFIG_FILE" ]; then
-        echo "Please enter the port number, be aware of port conflicts, default 28080"
+        echo "Please enter the port number, pay attention to avoid port conflicts, default 28080"
         read -p "Please enter the port number (default: 28080): " PORT
-        # Check if a port number was provided, if not use the default value
+        # Check if port number provided, use default if not
         PORT=${PORT:-28080}
-        # Create the configuration file directory
+        # Create config file directory
         mkdir -p "$(dirname $CONFIG_FILE)"
-        # Write to the configuration file
+        # Write to config file
         echo "port=$PORT" > "$CONFIG_FILE"
         echo "Configuration file created at $CONFIG_FILE"
     else
-        # Ask if the user wants to use the existing configuration file
-        read -p "Do you want to use the existing configuration file? (yes/no): " USE_EXISTING_CONFIG
+        # Ask if user wants to use existing config file directly
+        read -p "Do you want to use the existing configuration file directly? (yes/no): " USE_EXISTING_CONFIG
         USE_EXISTING_CONFIG=$(echo "$USE_EXISTING_CONFIG" | tr '[:upper:]' '[:lower:]')
         if [ "$USE_EXISTING_CONFIG" == "yes" ]; then
-            # Read the port number from the configuration file
+            # Read port number from config file
             PORT=$(grep -Po '(?<=port=)\d+' "$CONFIG_FILE")
             if [ -z "$PORT" ]; then
                 echo "Invalid port number in configuration file: $CONFIG_FILE"
                 exit 1
             fi
         else
-            echo "Please enter the port number, be aware of port conflicts, default 28080"
+            echo "Please enter the port number, pay attention to avoid port conflicts, default 28080"
             read -p "Please enter the port number (default: 28080): " PORT
-            # Check if a port number was provided, if not use the default value
+            # Check if port number provided, use default if not
             PORT=${PORT:-28080}
-            # Update the port number in the configuration file
+            # Update port number in config file
             sed -i "s/^port=.*/port=$PORT/" "$CONFIG_FILE"
             echo "Configuration file updated: $CONFIG_FILE"
         fi
     fi
 
-    echo "Fetching the project, estimated total size 10mb"
-    # Get repository URL, default to your GitHub repository
-    read -p "Please enter the repository URL (default: https://github.com/EWEDLCM/fnos-qb-proxy.git): " REPO_URL
-    REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
+    echo "Fetching the project, expected total usage of 10mb"
+    echo "Please enter the repository URL, default is https://gitee.com/ewedl/fnos-qb-proxy.git"
+    read -p "Please enter the repository URL (press Enter to keep default): " REPO_URL
+    REPO_URL=${REPO_URL:-https://gitee.com/ewedl/fnos-qb-proxy.git}
 
     # Clone repository
-    echo "Cloning repository $REPO_URL to fnos-qb-proxy directory..."
+    echo "Cloning repository $REPO_URL into fnos-qb-proxy directory..."
     git clone --depth 1 "$REPO_URL" fnos-qb-proxy
+
+    # Check if cloning was successful
     if [ $? -ne 0 ]; then
-        echo "Failed to clone repository, please check the URL and try again."
+        echo "Failed to clone repository, please check if the folder already exists and if the entered repository URL is correct."
         exit 1
     fi
     cd fnos-qb-proxy
-
+    export GOPROXY=https://mirrors.aliyun.com/goproxy/
+    echo "Subsequent operations may require administrator password!!"
     # Check if Go is installed
     if ! command -v go &> /dev/null; then
         echo "Go is not installed. Installing Go..."
-        # Install Go based on the operating system
+        echo "Please enter the administrator password!!"
+        # Install Go according to operating system
         if [[ "$OSTYPE" == "linux"* ]]; then
             sudo apt-get update
             sudo apt-get install -y golang
@@ -281,23 +289,25 @@ elif [ "$LANG" == "en" ]; then
     # Remove Go version declaration from go.mod file
     if grep -q '^go ' go.mod; then
         sed -i '/^go /d' go.mod
-        echo "Removed go version declaration from go.mod"
+        echo "Removed Go version declaration from go.mod"
     else
-        echo "No go version declaration found in go.mod"
+        echo "No Go version declaration found in go.mod"
     fi
 
     # Download all dependencies and update go.sum file
     go mod download
 
-    # Build the Go program
+    # Compile Go program
     GOOS=linux GOARCH=amd64 go build -o fnos-qb-proxy_linux-amd64
+
+    # Check compilation result
     if [ $? -ne 0 ]; then
-        echo "Build failed!"
+        echo "Compilation failed!"
         exit 1
     fi
-    echo "Build successful!"
+    echo "Compilation succeeded!"
 
-    # Ask if the user wants to add the service to systemd
+    # Ask if user wants to add service to systemd
     echo "------------------------------------------------------------"
     read -p "Do you want to add the service to systemd? (yes/no): " ADD_TO_SYSTEMD
     ADD_TO_SYSTEMD=$(echo "$ADD_TO_SYSTEMD" | tr '[:upper:]' '[:lower:]')
@@ -311,27 +321,29 @@ After=network.target
 
 [Service]
 User=$USER
+ConditionPathExists=!/home/$USER/qbt.sock
+ExecStartPre=/bin/sleep 30
 ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \"$CONFIG_FILE\"
 Restart=always
 
 [Install]
 WantedBy=multi-user.target" | sudo tee $SERVICE_FILE > /dev/null
 
-        # Move the compiled binary to /usr/local/bin
+        # Move compiled program file to /usr/local/bin
         sudo mv fnos-qb-proxy_linux-amd64 /usr/local/bin/fnos-qb-proxy
-        # Enable and start the service
+        # Enable and start service
         sudo systemctl daemon-reload
         sudo systemctl enable fnos-qb-proxy
         sudo systemctl start fnos-qb-proxy
 
         echo "fnos-qb-proxy service has been successfully added to systemd and started."
-        
-        # Final message
-        read -p "Script finished, press Enter to exit"
+
+        # Directly jump to the final prompt
+        read -p "Script finished, press Enter key to exit script"
         exit 0
     fi
-    # Final message
+    # Final prompt
     echo "------------------------------------------------------------"
-    read -p "Script finished, press Enter to exit"
+    read -p "Script finished, press Enter key to exit script"
     exit 0
 fi
