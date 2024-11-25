@@ -90,14 +90,12 @@ if [ "$LANG" == "zh" ]; then
         fi
     fi
 
-    # 提示用户输入仓库 URL
-    echo "正在拉取项目中，预计总占用10mb"
-    echo "请输入仓库 URL，默认为 https://github.com/EWEDLCM/fnos-qb-proxy.git"
-    read -p "请输入仓库 URL (直接回车保持默认): " REPO_URL
-    REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
+    # 默认仓库 URL
+    REPO_URL="https://github.com/EWEDLCM/fnos-qb-proxy.git"
 
     # 克隆仓库，使用浅克隆
     while true; do
+        echo "正在拉取项目中，预计总占用10mb"
         echo "克隆仓库 $REPO_URL 到 fnos-qb-proxy 目录中..."
         git clone --depth 1 "$REPO_URL" fnos-qb-proxy
 
@@ -283,14 +281,12 @@ elif [ "$LANG" == "en" ]; then
         fi
     fi
 
-    # Prompt user to input repository URL
-    echo "Fetching the project, estimated total size 10mb"
-    echo "Please enter the repository URL, default is https://github.com/EWEDLCM/fnos-qb-proxy.git"
-    read -p "Please enter the repository URL (default: https://github.com/EWEDLCM/fnos-qb-proxy.git): " REPO_URL
-    REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
+    # Default repository URL
+    REPO_URL="https://github.com/EWEDLCM/fnos-qb-proxy.git"
 
     # Clone repository, using shallow clone
     while true; do
+        echo "Fetching the project, estimated total size 10mb"
         echo "Cloning repository $REPO_URL to fnos-qb-proxy directory..."
         git clone --depth 1 "$REPO_URL" fnos-qb-proxy
 
