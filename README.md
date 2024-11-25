@@ -1,5 +1,3 @@
-# fnos-qb-proxy   由于无法持久化，项目暂不可用
-
 ## 项目出处?
 本项目是出自于原作者xxxuuu的一个go程序，个人对项目中的部分代码逻辑做了修改，并制作了sh脚本方便部署
 
@@ -13,7 +11,8 @@
 curl -s https://raw.githubusercontent.com/EWEDLCM/fnos-qb-proxy/main/fnos-qb.sh -o fnos-qb.sh && chmod +x fnos-qb.sh && ./fnos-qb.sh
 ```
 ## 注意事项
-在部署前可能需要在飞牛的webui打开一次下载器界面，由此建立sock文化。如果忘了进行这一步，需要打开后在终端执行一次服务重启
+本项目部署及使用时，需要确保下载器内有至少一个任务保持持续做种状态，由此来确保sock的持久化，否则将导致服务无法正常使用。
+如果服务已经报错，请补充一个种子任务让其做种，而后执行以下命令重启本服务
 ```
 sudo systemctl restart fnos-qb-proxy.service
 ```
@@ -35,7 +34,8 @@ curl -s https://raw.githubusercontent.com/EWEDLCM/fnos-qb-proxy/main/fnos-qb.sh 
 ```
 
 ## Important Notes
-Before deploying, you may need to open the downloader interface once in the fnOS web UI to establish the socket connection. If you forget to do this step, you will need to open the interface and then restart the service from the terminal:
+When deploying and using this project, ensure that there is at least one task in the downloader maintaining a continuous seeding state to ensure the persistence of the sock. Otherwise, it will result in the service failing to function properly.
+If the service has already reported an error, add a seeding task and then execute the following command to restart the service：
 ```
 sudo systemctl restart fnos-qb-proxy.service
 ```
