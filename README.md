@@ -1,6 +1,6 @@
 ## 项目出处?
-本项目源于xxxuuu作者的fnos-qb-proxy项目，项目地址为：https://github.com/xxxuuu/fnos-qb-proxy（喜欢的可以给原作者点歌star，当然也可以给我点一个！）
-
+本项目源于xxxuuu作者的fnos-qb-proxy项目，项目地址为：https://github.com/xxxuuu/fnos-qb-proxy
+（喜欢的可以给原作者点歌star，当然也可以给我点一个！）
 经二次开发与优化，对其中的部分代码逻辑进行了调整，提升了易用性和灵活性，更好地满足使用需求。
 
 ## 这是什么?
@@ -24,7 +24,8 @@ sudo systemctl restart fnos-qb-proxy.service
 # fnos-qb-proxy
 
 ## Project Origin
-This project originates from the fnos-qb-proxy project by author xxxuuu, available at: https://github.com/xxxuuu/fnos-qb-proxy (if you like it, feel free to give the original author a star, and of course, you can give me one too!)
+This project originates from the fnos-qb-proxy project by author xxxuuu, available at: https://github.com/xxxuuu/fnos-qb-proxy
+(if you like it, feel free to give the original author a star, and of course, you can give me one too!)
 
 After secondary development and optimization, adjustments have been made to some of the code logic to improve usability and flexibility, better meeting user needs.
 
