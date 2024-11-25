@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # 选择语言
 echo "请选择语言(Please select a language)："
 echo "1. 中文"
@@ -5,9 +7,9 @@ echo "2. English"
 read -p "请输入选项 (1 或 2): " LANG_CHOICE
 
 # 根据选择设置语言变量
-if [ "$LANG_CHOICE" == "1" ]; then
+if [ "$LANG_CHOICE" = "1" ]; then
     LANG="zh"
-elif [ "$LANG_CHOICE" == "2" ]; then
+elif [ "$LANG_CHOICE" = "2" ]; then
     LANG="en"
 else
     echo "无效的选项，使用默认语言：中文"
@@ -15,7 +17,7 @@ else
 fi
 
 # 根据语言选择显示提示语
-if [ "$LANG" == "zh" ]; then
+if [ "$LANG" = "zh" ]; then
     # 显示提示语
     echo "┌──────────────────────────────────────────────────────────┐"
     echo "│      本项目基于xxxuuu大佬的fnos-qb-proxy项目进行修改     │"
@@ -30,7 +32,7 @@ if [ "$LANG" == "zh" ]; then
         echo "yes：删除服务并退出脚本；no：直接退出脚本"
         read -p "您想删除现有的服务和文件吗？(yes/no): " DELETE_SERVICE
         DELETE_SERVICE=$(echo "$DELETE_SERVICE" | tr '[:upper:]' '[:lower:]')
-        if [ "$DELETE_SERVICE" == "yes" ]; then
+        if [ "$DELETE_SERVICE" = "yes" ]; then
             echo "正在删除现有服务和文件..."
             sudo systemctl stop fnos-qb-proxy
             sudo systemctl disable fnos-qb-proxy
@@ -62,7 +64,7 @@ if [ "$LANG" == "zh" ]; then
         # 检查是否提供了端口号，如果没有提供则使用默认值
         PORT=${PORT:-28080}
         # 创建配置文件目录
-        mkdir -p "$(dirname $CONFIG_FILE)"
+        mkdir -p "$(dirname "$CONFIG_FILE")"
         # 写入配置文件
         echo "port=$PORT" > "$CONFIG_FILE"
         echo "配置文件已创建于 $CONFIG_FILE"
@@ -70,7 +72,7 @@ if [ "$LANG" == "zh" ]; then
         # 询问是否直接采用现有配置文件
         read -p "是否直接采用现有配置文件？(yes/no): " USE_EXISTING_CONFIG
         USE_EXISTING_CONFIG=$(echo "$USE_EXISTING_CONFIG" | tr '[:upper:]' '[:lower:]')
-        if [ "$USE_EXISTING_CONFIG" == "yes" ]; then
+        if [ "$USE_EXISTING_CONFIG" = "yes" ]; then
             # 读取配置文件中的端口号
             PORT=$(grep -Po '(?<=port=)\d+' "$CONFIG_FILE")
             if [ -z "$PORT" ]; then
@@ -110,10 +112,10 @@ if [ "$LANG" == "zh" ]; then
         echo "未安装Go。正在安装Go..."
         echo "请输入管理员密码！！"
         # 根据操作系统安装Go
-        if [[ "$OSTYPE" == "linux"* ]]; then
+        if [ "$OSTYPE" = "linux"* ]; then
             sudo apt-get update
             sudo apt-get install -y golang
-        elif [[ "$OSTYPE" == "darwin"* ]]; then
+        elif [ "$OSTYPE" = "darwin"* ]; then
             brew install go
         else
             echo "不支持的操作系统: $OSTYPE"
@@ -147,22 +149,23 @@ if [ "$LANG" == "zh" ]; then
     read -p "您想将服务添加到 systemd 吗？(yes/no): " ADD_TO_SYSTEMD
     ADD_TO_SYSTEMD=$(echo "$ADD_TO_SYSTEMD" | tr '[:upper:]' '[:lower:]')
 
-    if [ "$ADD_TO_SYSTEMD" == "yes" ]; then
+    if [ "$ADD_TO_SYSTEMD" = "yes" ]; then
         # 创建 systemd 服务文件
         SERVICE_FILE="/etc/systemd/system/fnos-qb-proxy.service"
         echo "[Unit]
 Description=fnOS qBittorrent Proxy Service
-After=network.target
+After=dlcenter.service
+Requires=dlcenter.service
 
 [Service]
 User=$USER
-ConditionPathExists=!/home/$USER/qbt.sock
-ExecStartPre=/bin/sleep 30
+RestartSec=5
+ExecStartPre=/bin/sleep 5
 ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \"$CONFIG_FILE\"
 Restart=always
 
 [Install]
-WantedBy=multi-user.target" | sudo tee $SERVICE_FILE > /dev/null
+WantedBy=multi-user.target" | sudo tee "$SERVICE_FILE" > /dev/null
 
         # 将编译后的程序文件移动到 /usr/local/bin
         sudo mv fnos-qb-proxy_linux-amd64 /usr/local/bin/fnos-qb-proxy
@@ -181,7 +184,7 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE > /dev/null
     echo "------------------------------------------------------------"
     read -p "脚本结束，按回车键可退出脚本"
     exit 0
-elif [ "$LANG" == "en" ]; then
+elif [ "$LANG" = "en" ]; then
     # Display prompts
     echo "This project is based on the fnos-qb-proxy project modified by xxxuuu"
     echo "Thank you for your contribution"
@@ -195,7 +198,7 @@ elif [ "$LANG" == "en" ]; then
         echo "yes: Delete the service and exit the script; no: Exit the script directly"
         read -p "Do you want to delete the existing service and files? (yes/no): " DELETE_SERVICE
         DELETE_SERVICE=$(echo "$DELETE_SERVICE" | tr '[:upper:]' '[:lower:]')
-        if [ "$DELETE_SERVICE" == "yes" ]; then
+        if [ "$DELETE_SERVICE" = "yes" ]; then
             echo "Deleting existing service and files..."
             sudo systemctl stop fnos-qb-proxy
             sudo systemctl disable fnos-qb-proxy
@@ -227,7 +230,7 @@ elif [ "$LANG" == "en" ]; then
         # Check if port number provided, use default if not
         PORT=${PORT:-28080}
         # Create config file directory
-        mkdir -p "$(dirname $CONFIG_FILE)"
+        mkdir -p "$(dirname "$CONFIG_FILE")"
         # Write to config file
         echo "port=$PORT" > "$CONFIG_FILE"
         echo "Configuration file created at $CONFIG_FILE"
@@ -235,7 +238,7 @@ elif [ "$LANG" == "en" ]; then
         # Ask if user wants to use existing config file directly
         read -p "Do you want to use the existing configuration file directly? (yes/no): " USE_EXISTING_CONFIG
         USE_EXISTING_CONFIG=$(echo "$USE_EXISTING_CONFIG" | tr '[:upper:]' '[:lower:]')
-        if [ "$USE_EXISTING_CONFIG" == "yes" ]; then
+        if [ "$USE_EXISTING_CONFIG" = "yes" ]; then
             # Read port number from config file
             PORT=$(grep -Po '(?<=port=)\d+' "$CONFIG_FILE")
             if [ -z "$PORT" ]; then
@@ -275,10 +278,10 @@ elif [ "$LANG" == "en" ]; then
         echo "Go is not installed. Installing Go..."
         echo "Please enter the administrator password!!"
         # Install Go according to operating system
-        if [[ "$OSTYPE" == "linux"* ]]; then
+        if [ "$OSTYPE" = "linux"* ]; then
             sudo apt-get update
             sudo apt-get install -y golang
-        elif [[ "$OSTYPE" == "darwin"* ]]; then
+        elif [ "$OSTYPE" = "darwin"* ]; then
             brew install go
         else
             echo "Unsupported operating system: $OSTYPE"
@@ -312,22 +315,23 @@ elif [ "$LANG" == "en" ]; then
     read -p "Do you want to add the service to systemd? (yes/no): " ADD_TO_SYSTEMD
     ADD_TO_SYSTEMD=$(echo "$ADD_TO_SYSTEMD" | tr '[:upper:]' '[:lower:]')
 
-    if [ "$ADD_TO_SYSTEMD" == "yes" ]; then
+    if [ "$ADD_TO_SYSTEMD" = "yes" ]; then
         # Create systemd service file
         SERVICE_FILE="/etc/systemd/system/fnos-qb-proxy.service"
         echo "[Unit]
 Description=fnOS qBittorrent Proxy Service
-After=network.target
+After=dlcenter.service
+Requires=dlcenter.service
 
 [Service]
 User=$USER
-ConditionPathExists=!/home/$USER/qbt.sock
-ExecStartPre=/bin/sleep 30
+RestartSec=5
+ExecStartPre=/bin/sleep 5
 ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \"$CONFIG_FILE\"
 Restart=always
 
 [Install]
-WantedBy=multi-user.target" | sudo tee $SERVICE_FILE > /dev/null
+WantedBy=multi-user.target" | sudo tee "$SERVICE_FILE" > /dev/null
 
         # Move compiled program file to /usr/local/bin
         sudo mv fnos-qb-proxy_linux-amd64 /usr/local/bin/fnos-qb-proxy
