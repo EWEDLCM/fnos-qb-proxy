@@ -90,31 +90,20 @@ if [ "$LANG" == "zh" ]; then
         fi
     fi
 
-    # 默认仓库 URL
-    REPO_URL="https://github.com/EWEDLCM/fnos-qb-proxy.git"
+    echo "正在拉取项目中，预计总占用10mb"
+    echo "请输入仓库 URL，默认为 https://github.com/EWEDLCM/fnos-qb-proxy.git"
+    read -p "请输入仓库 URL (直接回车保持默认): " REPO_URL
+    REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
 
     # 克隆仓库，使用浅克隆
-    while true; do
-        echo "正在拉取项目中，预计总占用10mb"
-        echo "克隆仓库 $REPO_URL 到 fnos-qb-proxy 目录中..."
-        git clone --depth 1 "$REPO_URL" fnos-qb-proxy
+    echo "克隆仓库 $REPO_URL 到 fnos-qb-proxy 目录中..."
+    git clone --depth 1 "$REPO_URL" fnos-qb-proxy
 
-        # 检查克隆是否成功
-        if [ $? -eq 0 ]; then
-            break
-        else
-            echo "克隆仓库失败，请检查输入的仓库 URL 是否正确。"
-            read -p "是否重新输入仓库 URL？(yes/no): " TRY_AGAIN
-            TRY_AGAIN=$(echo "$TRY_AGAIN" | tr '[:upper:]' '[:lower:]')
-            if [ "$TRY_AGAIN" == "yes" ]; then
-                read -p "请输入新的仓库 URL: " REPO_URL
-            else
-                echo "退出脚本。"
-                exit 1
-            fi
-        fi
-    done
-
+    # 检查克隆是否成功
+    if [ $? -ne 0 ]; then
+        echo "克隆仓库失败，请检查输入的仓库 URL 是否正确。"
+        exit 1
+    fi
     cd fnos-qb-proxy
 
     # 检查是否安装了Go
@@ -132,9 +121,6 @@ if [ "$LANG" == "zh" ]; then
         fi
     fi
 
-    # 设置 Go 模块镜像
-    export GOPROXY=https://goproxy.cn,direct
-
     # 移除 go.mod 文件中的 Go 版本声明
     if grep -q '^go ' go.mod; then
         sed -i '/^go /d' go.mod
@@ -144,25 +130,7 @@ if [ "$LANG" == "zh" ]; then
     fi
 
     # 下载所有依赖项并更新 go.sum 文件
-    while true; do
-        echo "正在下载依赖项..."
-        go mod download
-
-        # 检查下载是否成功
-        if [ $? -eq 0 ]; then
-            break
-        else
-            echo "下载依赖项失败，请检查网络连接。"
-            read -p "是否重新尝试下载依赖项？(yes/no): " TRY_AGAIN
-            TRY_AGAIN=$(echo "$TRY_AGAIN" | tr '[:upper:]' '[:lower:]')
-            if [ "$TRY_AGAIN" == "yes" ]; then
-                continue
-            else
-                echo "退出脚本。"
-                exit 1
-            fi
-        fi
-    done
+    go mod download
 
     # 编译Go程序
     GOOS=linux GOARCH=amd64 go build -o fnos-qb-proxy_linux-amd64
@@ -281,31 +249,18 @@ elif [ "$LANG" == "en" ]; then
         fi
     fi
 
-    # Default repository URL
-    REPO_URL="https://github.com/EWEDLCM/fnos-qb-proxy.git"
+    echo "Fetching the project, estimated total size 10mb"
+    # Get repository URL, default to your GitHub repository
+    read -p "Please enter the repository URL (default: https://github.com/EWEDLCM/fnos-qb-proxy.git): " REPO_URL
+    REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
 
-    # Clone repository, using shallow clone
-    while true; do
-        echo "Fetching the project, estimated total size 10mb"
-        echo "Cloning repository $REPO_URL to fnos-qb-proxy directory..."
-        git clone --depth 1 "$REPO_URL" fnos-qb-proxy
-
-        # Check if clone was successful
-        if [ $? -eq 0 ]; then
-            break
-        else
-            echo "Failed to clone repository, please check the URL and try again."
-            read -p "Do you want to re-enter the repository URL? (yes/no): " TRY_AGAIN
-            TRY_AGAIN=$(echo "$TRY_AGAIN" | tr '[:upper:]' '[:lower:]')
-            if [ "$TRY_AGAIN" == "yes" ]; then
-                read -p "Please enter the new repository URL: " REPO_URL
-            else
-                echo "Exiting script."
-                exit 1
-            fi
-        fi
-    done
-
+    # Clone repository
+    echo "Cloning repository $REPO_URL to fnos-qb-proxy directory..."
+    git clone --depth 1 "$REPO_URL" fnos-qb-proxy
+    if [ $? -ne 0 ]; then
+        echo "Failed to clone repository, please check the URL and try again."
+        exit 1
+    fi
     cd fnos-qb-proxy
 
     # Check if Go is installed
@@ -323,9 +278,6 @@ elif [ "$LANG" == "en" ]; then
         fi
     fi
 
-    # Set Go module proxy
-    export GOPROXY=https://goproxy.cn,direct
-
     # Remove Go version declaration from go.mod file
     if grep -q '^go ' go.mod; then
         sed -i '/^go /d' go.mod
@@ -335,25 +287,7 @@ elif [ "$LANG" == "en" ]; then
     fi
 
     # Download all dependencies and update go.sum file
-    while true; do
-        echo "Downloading dependencies..."
-        go mod download
-
-        # Check if download was successful
-        if [ $? -eq 0 ]; then
-            break
-        else
-            echo "Failed to download dependencies, please check your internet connection."
-            read -p "Do you want to retry downloading dependencies? (yes/no): " TRY_AGAIN
-            TRY_AGAIN=$(echo "$TRY_AGAIN" | tr '[:upper:]' '[:lower:]')
-            if [ "$TRY_AGAIN" == "yes" ]; then
-                continue
-            else
-                echo "Exiting script."
-                exit 1
-            fi
-        fi
-    done
+    go mod download
 
     # Build the Go program
     GOOS=linux GOARCH=amd64 go build -o fnos-qb-proxy_linux-amd64
