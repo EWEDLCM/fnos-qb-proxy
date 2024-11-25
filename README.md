@@ -13,6 +13,10 @@
 ## 如何使用
 使用以下代码进行部署即可，内有较为详细的注释提示，并做了双语支持
 ```
+curl -s https://raw.githubusercontent.com/EWEDLCM/fnos-qb-proxy/refs/heads/main/fnos-qb.sh -o fnos-qb.sh && chmod +x fnos-qb.sh && ./fnos-qb.sh
+```
+或者
+```
 curl -s https://gitee.com/ewedl/fnos-qb-proxy/raw/main/fnos-qb.sh -o fnos-qb.sh && chmod +x fnos-qb.sh && ./fnos-qb.sh
 ```
 
