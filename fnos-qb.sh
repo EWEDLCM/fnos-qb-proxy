@@ -19,12 +19,12 @@ fi
 # 根据语言选择显示提示语
 if [ "$LANG" == "zh" ]; then
     # 显示提示语
-   echo "┌──────────────────────────────────────────────────────────┐"
-   echo "│      本项目基于xxxuuu大佬的fnos-qb-proxy项目进行修改     │"
-   echo "│                      感谢大佬的贡献                      │"
-   echo "│             本脚本旨在方便用户进行自定义配置             │"
-   echo "│                 具体根据脚本提示进行即可                 │"
-   echo "└──────────────────────────────────────────────────────────┘"
+    echo "┌──────────────────────────────────────────────────────────┐"
+    echo "│      本项目基于xxxuuu大佬的fnos-qb-proxy项目进行修改     │"
+    echo "│                      感谢大佬的贡献                      │"
+    echo "│             本脚本旨在方便用户进行自定义配置             │"
+    echo "│                 具体根据脚本提示进行即可                 │"
+    echo "└──────────────────────────────────────────────────────────┘"
 
     # 检测系统内是否含有fnos-qb-proxy服务
     if systemctl list-unit-files | grep -q "fnos-qb-proxy.service"; then
@@ -91,7 +91,6 @@ if [ "$LANG" == "zh" ]; then
     fi
 
     echo "正在拉取项目中，预计总占用10mb"
-    echo "正在拉取项目中，预计总占用10mb"
     echo "请输入仓库 URL，默认为 https://github.com/EWEDLCM/fnos-qb-proxy.git"
     read -p "请输入仓库 URL (直接回车保持默认): " REPO_URL
     REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
@@ -137,12 +136,11 @@ if [ "$LANG" == "zh" ]; then
     GOOS=linux GOARCH=amd64 go build -o fnos-qb-proxy_linux-amd64
 
     # 检查编译结果
-    if [ $? -eq 0 ]; then
-        echo "编译成功！"
-    else
+    if [ $? -ne 0 ]; then
         echo "编译失败！"
         exit 1
     fi
+    echo "编译成功！"
 
     # 询问是否将服务添加到 systemd
     echo "------------------------------------------------------------"
@@ -162,7 +160,7 @@ ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \
 Restart=always
 
 [Install]
-WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
+WantedBy=multi-user.target" | sudo tee $SERVICE_FILE > /dev/null
 
         # 将编译后的程序文件移动到 /usr/local/bin
         sudo mv fnos-qb-proxy_linux-amd64 /usr/local/bin/fnos-qb-proxy
@@ -184,7 +182,7 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
 elif [ "$LANG" == "en" ]; then
     # Display prompts
     echo "This project is based on the fnos-qb-proxy project modified by xxxuuu"
-    echo " Thank you for your contribution"
+    echo "Thank you for your contribution"
     echo "This script aims to facilitate user customization, adding functions to install and uninstall services"
     echo "Please follow the script prompts"
     echo "------------------------------------------------------------"
@@ -253,10 +251,16 @@ elif [ "$LANG" == "en" ]; then
 
     echo "Fetching the project, estimated total size 10mb"
     # Get repository URL, default to your GitHub repository
-    REPO_URL="https://github.com/EWEDLCM/fnos-qb-proxy.git"
+    read -p "Please enter the repository URL (default: https://github.com/EWEDLCM/fnos-qb-proxy.git): " REPO_URL
+    REPO_URL=${REPO_URL:-https://github.com/EWEDLCM/fnos-qb-proxy.git}
 
     # Clone repository
-    git clone "$REPO_URL" fnos-qb-proxy
+    echo "Cloning repository $REPO_URL to fnos-qb-proxy directory..."
+    git clone --depth 1 "$REPO_URL" fnos-qb-proxy
+    if [ $? -ne 0 ]; then
+        echo "Failed to clone repository, please check the URL and try again."
+        exit 1
+    fi
     cd fnos-qb-proxy
 
     # Check if Go is installed
@@ -285,18 +289,16 @@ elif [ "$LANG" == "en" ]; then
     # Download all dependencies and update go.sum file
     go mod download
 
-    # Compile Go program
+    # Build the Go program
     GOOS=linux GOARCH=amd64 go build -o fnos-qb-proxy_linux-amd64
-
-    # Check compilation result
-    if [ $? -eq 0 ]; then
-        echo "Compilation successful!"
-    else
-        echo "Compilation failed!"
+    if [ $? -ne 0 ]; then
+        echo "Build failed!"
         exit 1
     fi
+    echo "Build successful!"
 
     # Ask if the user wants to add the service to systemd
+    echo "------------------------------------------------------------"
     read -p "Do you want to add the service to systemd? (yes/no): " ADD_TO_SYSTEMD
     ADD_TO_SYSTEMD=$(echo "$ADD_TO_SYSTEMD" | tr '[:upper:]' '[:lower:]')
 
@@ -313,9 +315,9 @@ ExecStart=/usr/local/bin/fnos-qb-proxy --uds \"/home/$USER/qbt.sock\" --config \
 Restart=always
 
 [Install]
-WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
+WantedBy=multi-user.target" | sudo tee $SERVICE_FILE > /dev/null
 
-        # Move binary file to /usr/local/bin
+        # Move the compiled binary to /usr/local/bin
         sudo mv fnos-qb-proxy_linux-amd64 /usr/local/bin/fnos-qb-proxy
         # Enable and start the service
         sudo systemctl daemon-reload
@@ -324,13 +326,12 @@ WantedBy=multi-user.target" | sudo tee $SERVICE_FILE
 
         echo "fnos-qb-proxy service has been successfully added to systemd and started."
         
-        # Directly jump to the final prompt
-        read -p "Script finished, press Enter to exit the script"
+        # Final message
+        read -p "Script finished, press Enter to exit"
         exit 0
     fi
-
-    # Final prompt
+    # Final message
     echo "------------------------------------------------------------"
-    read -p "Script finished, press Enter to exit the script"
+    read -p "Script finished, press Enter to exit"
     exit 0
 fi
