@@ -15,6 +15,11 @@
 ```
 curl -s https://raw.githubusercontent.com/EWEDLCM/fnos-qb-proxy/main/fnos-qb.sh -o fnos-qb.sh && chmod +x fnos-qb.sh && ./fnos-qb.sh
 ```
+或者使用加速链接
+```
+curl -s https://gh.api.99988866.xyz/https://raw.githubusercontent.com/EWEDLCM/fnos-qb-proxy/main/fnos-qb.sh -o fnos-qb.sh && chmod +x fnos-qb.sh && ./fnos-qb.sh
+```
+
 ## 注意事项
 本项目部署及使用时，需要确保下载器内有至少一个任务保持持续做种状态，由此来确保sock的持久化，否则将导致服务无法正常使用。
 如果服务已经报错，请补充一个种子任务让其做种，而后执行以下命令重启本服务
